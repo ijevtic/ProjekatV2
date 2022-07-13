@@ -8,7 +8,7 @@ const { ethers } = require("hardhat");
 
 async function main() {
   const Ecommerce = await ethers.getContractFactory("MainContract");
-  const myEcommerce = await Ecommerce.deploy();
+  const myEcommerce = await Ecommerce.deploy(5);
   await myEcommerce.deployed();
   console.log("MyFirstContract deployed to:", myEcommerce.address);
 }

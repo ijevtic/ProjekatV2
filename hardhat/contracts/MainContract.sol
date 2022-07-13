@@ -24,7 +24,7 @@ contract MainContract {
     uint totalSum = 0;
     address[] public users; //active users
 
-    constructor() {
+    constructor(uint nesto) {
         i_owner = msg.sender;
     }
 
@@ -73,9 +73,10 @@ contract MainContract {
             uint remaining = user.stakedEther - withdrawAmount;
             for (uint i = 0; i < users.length; i++) {
                 uint base = userStakeMapping[users[i]].stakedEther;
-                uint add = (base * remaining) / totalSum;
+                uint add = base * remaining / totalSum;
                 userStakeMapping[users[i]].stakedEther += add;
             }
+            totalSum += remaining;
         }
 
         (bool sent, bytes memory data) = payable(msg.sender).call{
@@ -91,7 +92,7 @@ contract MainContract {
         require(i_owner == msg.sender);
     }
 
-    function test(uint number) public returns(uint) {
+    function test(uint number) public view returns(uint) {
         return number+1;
     }
 }
