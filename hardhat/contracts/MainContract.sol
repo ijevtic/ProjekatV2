@@ -15,6 +15,7 @@ contract MainContract {
         uint256 index;
         uint256 c;
         uint256 k;
+        uint256 previousSumK;
     }
 
     address private immutable i_owner;
@@ -69,20 +70,25 @@ contract MainContract {
         }
         amountATokens = newAmountATokens + msg.value;
 
-        user.c = global_c;
-        user.k = global_k;
         if (user.stakedEther == 0) {
             users.push(msg.sender);
             user.index = users.length - 1;
+        } else {
+            user.previousSumK += user.stakedEther * global_c * global_k / user.c / user.k - user.stakedEther * global_c / user.c;
+            user.stakedEther = user.stakedEther * global_c / userStakeMapping[msg.sender].c + msg.value;
         }
+
+        user.c = global_c;
+        user.k = global_k;
 
         IWETH_GATEWAY.depositETH{value: msg.value}(
             LENDING_POOL,
             address(this),
             0
         );
+        
 
-        user.stakedEther += msg.value;
+        
         emit Deposit(msg.sender, user.stakedEther);
     }
 
@@ -113,7 +119,7 @@ contract MainContract {
             2;
 
         uint256 uk = (user.stakedEther * global_c * global_k) / user.c / user.k;
-        uint256 profit = uk - ((user.stakedEther * global_c) / user.c);
+        uint256 profit = uk - ((user.stakedEther * global_c) / user.c) + user.previousSumK;
 
         uint256 withdrawAmount = (user.stakedEther * global_c) / user.c;
         uint256 remaining = 0;
@@ -147,6 +153,7 @@ contract MainContract {
         if (sent == false) revert();
 
         amountATokens -= (withdrawAmount + profit);
+        user.previousSumK = 0;
 
         // erase the user
         delete userStakeMapping[msg.sender];
