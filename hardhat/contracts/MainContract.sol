@@ -60,7 +60,7 @@ contract MainContract {
 
         uint diff = newAmountATokens - amountATokens;
 
-        if (amountATokens == 0) global_k = 1;
+        if (amountATokens == 0) global_k = MULTIPLY;
         else {
             global_k =
                 (global_k * (MULTIPLY + (diff * MULTIPLY) / amountATokens)) /
@@ -127,7 +127,7 @@ contract MainContract {
 
         totalSum -= withdrawAmount;
         if (divide == 0) {
-            global_c = 1;
+            global_c = MULTIPLY;
         } else {
             global_c =
                 (global_c * (MULTIPLY + (remaining * MULTIPLY) / divide)) /
