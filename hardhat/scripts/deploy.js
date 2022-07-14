@@ -11,6 +11,11 @@ async function main() {
   const myEcommerce = await Ecommerce.deploy();
   await myEcommerce.deployed();
   console.log("MyFirstContract deployed to:", myEcommerce.address);
+
+  // await run("verify:verify", {
+  //   address: myEcommerce.address,
+  //   constructorArguments: [],
+  // })
 }
 
 // We recommend this pattern to be able to use async/await everywhere
