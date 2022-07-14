@@ -40,14 +40,15 @@ contract MainContract {
         ERC20(0x87b1f4cf9BD63f7BBD3eE1aD04E8F52540349347);
 
     event Deposit(address indexed user, uint256 amount);
-    event Withdraw(address indexed user, uint256 amount);
+    event Withdraw(address indexed user, uint256 amountBase, uint256 amountProfit);
+    event EventTest(uint256 amount);
 
     modifier onlyOwner() {
         if (i_owner == msg.sender) revert MainContract__AccountNotOwner();
         _;
     }
 
-    constructor() {
+    constructor(uint256 dusanemajmune) {
         i_owner = msg.sender;
     }
 
@@ -149,7 +150,7 @@ contract MainContract {
 
         // erase the user
         delete userStakeMapping[msg.sender];
-        emit Withdraw(msg.sender, withdrawAmount);
+        emit Withdraw(msg.sender, withdrawAmount, profit);
     }
 
     function getAWETHAddressBalance() public view returns (uint256) {
@@ -180,6 +181,14 @@ contract MainContract {
         return
             (userStakeMapping[msg.sender].stakedEther * global_c) /
             userStakeMapping[msg.sender].c;
+    }
+
+    function test(uint vr) public view returns(uint) {
+        return vr+1;
+    }
+
+    function testEvent(uint vr) public {
+        emit EventTest(vr);
     }
 
     receive() external payable {}
