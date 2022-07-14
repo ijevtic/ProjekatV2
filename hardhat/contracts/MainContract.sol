@@ -115,5 +115,14 @@ contract MainContract {
 
     function ownerWithdraw() public onlyOwner {}
 
+
+    function balanceOfUser() public returns(uint256) {
+        console.log(userStakeMapping[msg.sender].stakedEther*global_c/userStakeMapping[msg.sender].c);
+        console.log(global_c);
+        console.log(userStakeMapping[msg.sender].c);
+        return userStakeMapping[msg.sender].stakedEther*global_c/userStakeMapping[msg.sender].c;
+        
+    }
+
     receive() external payable {}
 }
