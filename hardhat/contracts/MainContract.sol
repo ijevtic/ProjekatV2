@@ -13,16 +13,19 @@ contract MainContract {
     uint256 constant STAKE_TIME = 30 days;
     uint256 constant MULTIPLY = 100000;
 
+
     struct User {
         uint256 stakedEther;
         uint256 startDate;
         uint256 index;
+        uint256 c;
     }
 
     address[] public users; //active users
     mapping(address => User) public userStakeMapping;
 
     uint256 totalSum = 0;
+    uint256 global_c = MULTIPLY;
 
     IWETHGateway private constant IWETH_GATEWAY =
         IWETHGateway(0xA61ca04DF33B72b235a8A28CfB535bb7A5271B70);
@@ -46,7 +49,7 @@ contract MainContract {
         User storage user = userStakeMapping[msg.sender];
         totalSum += msg.value;
         user.startDate = block.timestamp;
-
+        user.c = global_c;
         if (user.stakedEther == 0) {
             users.push(msg.sender);
             user.index = users.length - 1;
@@ -74,26 +77,24 @@ contract MainContract {
         userStakeMapping[lastUser].index = index;
         users.pop();
 
-        totalSum -= user.stakedEther;
         uint256 percentage = ((block.timestamp - user.startDate) * MULTIPLY) /
             STAKE_TIME /
             2 +
             MULTIPLY /
             2;
 
-        uint256 withdrawAmount = user.stakedEther;
-
+        uint256 withdrawAmount = user.stakedEther * global_c / user.c;
+        uint256 remaining = 0;
         if (percentage < MULTIPLY) {
             // uzmi procentualno
             withdrawAmount = (withdrawAmount * percentage) / MULTIPLY;
-            uint256 remaining = user.stakedEther - withdrawAmount;
-            for (uint256 i = 0; i < users.length; i++) {
-                uint256 base = userStakeMapping[users[i]].stakedEther;
-                uint256 add = (base * remaining) / totalSum;
-                userStakeMapping[users[i]].stakedEther += add;
-            }
+            remaining = user.stakedEther * global_c / user.c - withdrawAmount;
         }
+        uint256 lastTotalSum = totalSum;
+        uint256 divide = totalSum - user.stakedEther * global_c / user.c;
 
+        totalSum -= withdrawAmount;
+        global_c = global_c * (MULTIPLY + remaining * MULTIPLY /divide)/MULTIPLY;
         // approve IWETH_GATEWAY to burn aWETH tokens
         aWETH_ERC20.approve(address(IWETH_GATEWAY), withdrawAmount);
         // trade aWETH tokens for ETH
