@@ -19,6 +19,7 @@ contract MainContract {
         uint256 startDate;
         uint256 index;
         uint256 c;
+        uint256 k;
     }
 
     address[] public users; //active users
@@ -26,6 +27,8 @@ contract MainContract {
 
     uint256 totalSum = 0;
     uint256 global_c = MULTIPLY;
+    uint256 global_k = MULTIPLY;
+    uint256 amountATokens = 0;
 
     IWETHGateway private constant IWETH_GATEWAY =
         IWETHGateway(0xA61ca04DF33B72b235a8A28CfB535bb7A5271B70);
@@ -49,7 +52,15 @@ contract MainContract {
         User storage user = userStakeMapping[msg.sender];
         totalSum += msg.value;
         user.startDate = block.timestamp;
+
+        uint256 newAmountATokens; // = aave
+
+        uint diff = newAmountATokens - amountATokens;
+        global_k = global_k*(MULTIPLY+diff*MULTIPLY/amountATokens)/MULTIPLY;
+        amountATokens = newAmountATokens + msg.value;
+
         user.c = global_c;
+        user.k = global_k;
         if (user.stakedEther == 0) {
             users.push(msg.sender);
             user.index = users.length - 1;
@@ -60,7 +71,7 @@ contract MainContract {
             address(this),
             0
         );
-
+        
         user.stakedEther += msg.value;
     }
 
@@ -68,6 +79,12 @@ contract MainContract {
         User storage user = userStakeMapping[msg.sender];
 
         if (user.stakedEther == 0) revert MainContract__StakerNotFound();
+
+
+        uint256 newAmountATokens; // = aave
+
+        uint diff = newAmountATokens - amountATokens;
+        global_k = global_k*(MULTIPLY+diff*MULTIPLY/amountATokens)/MULTIPLY;
 
         uint256 index = user.index;
 
@@ -82,6 +99,9 @@ contract MainContract {
             2 +
             MULTIPLY /
             2;
+
+        uint256 uk = user.stakedEther * global_c * global_k / user.c / user.k;
+        uint256 profit = uk - (user.stakedEther * global_c / user.c);
 
         uint256 withdrawAmount = user.stakedEther * global_c / user.c;
         uint256 remaining = 0;
@@ -102,8 +122,10 @@ contract MainContract {
 
         // pay the user
         (bool sent, bytes memory data) = payable(msg.sender).call{
-            value: withdrawAmount
+            value: withdrawAmount + profit
         }("");
+
+        amountATokens -= (withdrawAmount + profit);
 
         // erase the user
         delete userStakeMapping[msg.sender];
