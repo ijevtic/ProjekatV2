@@ -23,15 +23,16 @@ class Object(object):
 
 class APY(Resource):
     def get(self):
-        return array_apy
+        return json_util.dumps(array_apy)
 
 class TRANSACTIONS(Resource):
-    def get(self):
-        return json_util.dumps(users_transaction_history)
+    def get(self, address):
+        return json_util.dumps(users_transaction_history[address])
+
 
 
 api.add_resource(APY, '/apy')
-api.add_resource(TRANSACTIONS, '/transactions')
+api.add_resource(TRANSACTIONS, '/transactions/<address>')
 
 RAY = 10**27
 SECONDS_PER_YEAR = 31536000
