@@ -38,6 +38,19 @@ contract_main = w3.eth.contract(address = "0xfDd15D6bFCa84b261551E47FA1438Fadb32
 event_filter1 = contract_main.events.Deposit.createFilter(fromBlock='latest')
 event_filter2 = contract_main.events.Withdraw.createFilter(fromBlock='latest')
 
+def get_database():
+    from pymongo import MongoClient
+    import pymongo
+
+    # Provide the mongodb atlas url to connect python to mongodb using pymongo
+    CONNECTION_STRING = "mongodb+srv://ivan2:1234@cluster0.1lcnh.mongodb.net/?retryWrites=true&w=majority"
+
+    # Create a connection using MongoClient. You can import MongoClient or use pymongo.MongoClient
+    from pymongo import MongoClient
+    client = MongoClient(CONNECTION_STRING)
+
+    # Create the database for our example (we will use the same database throughout the tutorial
+    return client['user_shopping_list']
 
 def create_transaction_object(jsonEvent):
     x = Object()
@@ -68,7 +81,8 @@ def collect_apy():
 
 
 if __name__ == '__main__':
-
+    dbname = get_database()
+    print(dbname)
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=collect_apy, trigger="interval", seconds=5)
     scheduler.start()
