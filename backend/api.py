@@ -11,6 +11,7 @@ import os
 from dotenv import load_dotenv
 import bson.json_util as json_util
 from flask_cors import CORS
+from pymongo import MongoClient
 
 app = Flask(__name__)
 CORS(app)
@@ -18,7 +19,6 @@ api = Api(app)
 
 array_apy = []
 users_transaction_history = dict()
-row = dict()
 
 class Object(object):
     pass
@@ -34,13 +34,9 @@ class TRANSACTIONS(Resource):
             users_transaction_history[address] = []
             print('lol')
             return json.dumps([])
-        row["user"] = "lol"
-        row["amount"] = "lol"
-        row["event"] = "loool"
-        row["block_number"] = "lol"
-        users_transaction_history[address].append(row)
         print(users_transaction_history[address])
-        return json.dumps(users_transaction_history[address])
+        print(type(users_transaction_history))
+        return json_util.dumps(users_transaction_history[address])
 
 
 
@@ -62,36 +58,37 @@ event_filter1 = contract_main.events.Deposit.createFilter(fromBlock='latest')
 event_filter2 = contract_main.events.Withdraw.createFilter(fromBlock='latest')
 
 def get_database():
-    from pymongo import MongoClient
-    import pymongo
-
     # Provide the mongodb atlas url to connect python to mongodb using pymongo
     load_dotenv()
 
     CONNECTION_STRING = os.getenv('CONNECTION_STRING')
     # Create a connection using MongoClient. You can import MongoClient or use pymongo.MongoClient
-    from pymongo import MongoClient
     client = MongoClient(CONNECTION_STRING)
 
     # Create the database for our example (we will use the same database throughout the tutorial
     return client['ProjekatV2']
 
-
-
 def create_transaction_object(jsonEvent, table):
     x = Object()
     json_object = json.loads(jsonEvent)
-    row["user"] = json_object['args']['user'].lower()
-    row["amount"] = json_object['args']['amount']
-    row["event"] = json_object['event']
-    row["block_number"] = json_object['blockNumber']
-    
+    row = {
+    "user": json_object['args']['user'].lower(),
+    "amount": json_object['args']['amount'],
+    "event": json_object['event'],
+    "block_number": json_object['blockNumber']
+    }
     table.insert_one(row)
-    print(row)
+
+    x = {
+    "amount": row['amount'],
+    "event": row['event'],
+    "block_number": row['block_number']
+    }
+
 
     if(row["user"] not in users_transaction_history):
             users_transaction_history[row["user"]] = []
-    users_transaction_history[row["user"]].append(row)
+    users_transaction_history[row["user"]].append(x)
 
 def collect_apy(apy_table, transactions_table):
     _,_,_,liq_rate,_,_,_,_,_,_,_,_ = contract_aave.functions.getReserveData('0xd0A1E359811322d97991E03f863a0C30C2cF029C').call()
@@ -106,7 +103,6 @@ def collect_apy(apy_table, transactions_table):
     
     for withdraw in event_filter2.get_new_entries():
         create_transaction_object(Web3.toJSON(withdraw), transactions_table)
-
 
 if __name__ == '__main__':
     dbname = get_database()
