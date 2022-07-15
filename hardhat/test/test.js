@@ -3,7 +3,7 @@ const hre = require('hardhat');
 describe('Yearn-view', function () {
     this.timeout(80000);
 
-    let senderAcc;
+    const senderAccounts = [];
     let yearnRegistry;
     let mainContractObj;
 
@@ -11,14 +11,18 @@ describe('Yearn-view', function () {
         const MainContract = await hre.ethers.getContractFactory("MainContract");
         mainContractObj = await MainContract.deploy();
  
-        senderAcc1 = (await hre.ethers.getSigners())[0];
-         
-        //senderAcc2 = (await hre.ethers.getSigners())[1];
+        senderAccounts.push((await hre.ethers.getSigners())[0]);
+        senderAccounts.push((await hre.ethers.getSigners())[1]);
+        senderAccounts.push((await hre.ethers.getSigners())[2]);
+        senderAccounts.push((await hre.ethers.getSigners())[3]);
+        senderAccounts.push((await hre.ethers.getSigners())[4]);
     });
 
     it('... should get pool liquidity', async () => {
 
-        await mainContractObj.stakeEther({value: 1e18});
-        // await mainContractObj.extractEther();
+        await mainContractObj.connect(senderAccounts[0]).stakeEther({value: ethers.utils.parseEther("100")});
+        await mainContractObj.connect(senderAccounts[1]).stakeEther({value: ethers.utils.parseEther("100")});
+        await mainContractObj.connect(senderAccounts[2]).stakeEther({value: ethers.utils.parseEther("200")});
+        await mainContractObj.connect(senderAccounts[3]).stakeEther({value: ethers.utils.parseEther("50")});
     });
 });
