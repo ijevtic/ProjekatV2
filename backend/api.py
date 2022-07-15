@@ -18,6 +18,7 @@ api = Api(app)
 
 array_apy = []
 users_transaction_history = dict()
+row = dict()
 
 class Object(object):
     pass
@@ -27,8 +28,19 @@ class APY(Resource):
         return json_util.dumps(array_apy)
 
 class TRANSACTIONS(Resource):
+    global users_transaction_history
     def get(self, address):
-        return json_util.dumps(users_transaction_history[address])
+        if address not in users_transaction_history:
+            users_transaction_history[address] = []
+            print('lol')
+            return json.dumps([])
+        row["user"] = "lol"
+        row["amount"] = "lol"
+        row["event"] = "loool"
+        row["block_number"] = "lol"
+        users_transaction_history[address].append(row)
+        print(users_transaction_history[address])
+        return json.dumps(users_transaction_history[address])
 
 
 
@@ -43,7 +55,7 @@ provider_url = 'https://kovan.infura.io/v3/75fe0c9d66ad48a7ba1e3c5ca2ac94a9'
 
 w3 = Web3(Web3.HTTPProvider(provider_url))
 contract_aave = w3.eth.contract(address = "0xE0fBa4Fc209b4948668006B2bE61711b7f465bAe", abi = abi_aave)
-contract_main = w3.eth.contract(address = "0xfDd15D6bFCa84b261551E47FA1438Fadb32B984E", abi = abi_main_contract)
+contract_main = w3.eth.contract(address = "0x325B591E8B707F97383c7a5bC4D24F45c4a3e4B8", abi = abi_main_contract)
 
 
 event_filter1 = contract_main.events.Deposit.createFilter(fromBlock='latest')
@@ -64,19 +76,22 @@ def get_database():
     # Create the database for our example (we will use the same database throughout the tutorial
     return client['ProjekatV2']
 
+
+
 def create_transaction_object(jsonEvent, table):
     x = Object()
     json_object = json.loads(jsonEvent)
-    x.user = json_object['args']['user']
-    x.amount = json_object['args']['amount']
-    x.event = json_object['event']
-    x.block_number = json_object['blockNumber']
-    row = {"user": x.user, "amount": x.amount, "event": x.event, "block_number": x.block_number}
+    row["user"] = json_object['args']['user'].lower()
+    row["amount"] = json_object['args']['amount']
+    row["event"] = json_object['event']
+    row["block_number"] = json_object['blockNumber']
+    
     table.insert_one(row)
+    print(row)
 
-    if(x.user not in users_transaction_history):
-            users_transaction_history[x.user] = []
-    users_transaction_history[x.user].append(x)
+    if(row["user"] not in users_transaction_history):
+            users_transaction_history[row["user"]] = []
+    users_transaction_history[row["user"]].append(row)
 
 def collect_apy(apy_table, transactions_table):
     _,_,_,liq_rate,_,_,_,_,_,_,_,_ = contract_aave.functions.getReserveData('0xd0A1E359811322d97991E03f863a0C30C2cF029C').call()
@@ -87,10 +102,10 @@ def collect_apy(apy_table, transactions_table):
     apy_table.insert_one(row)
 
     for deposit in event_filter1.get_new_entries():
-        create_transaction_object(Web3.toJSON(deposit, transactions_table))
+        create_transaction_object(Web3.toJSON(deposit), transactions_table)
     
     for withdraw in event_filter2.get_new_entries():
-        create_transaction_object(Web3.toJSON(withdraw, transactions_table))
+        create_transaction_object(Web3.toJSON(withdraw), transactions_table)
 
 
 if __name__ == '__main__':
@@ -110,7 +125,7 @@ if __name__ == '__main__':
         users_transaction_history[t["user"]].append({"amount": t["amount"], "event": t["event"], "block_number": t["block_number"]})
     
     scheduler = BackgroundScheduler()
-    scheduler.add_job(lambda: collect_apy(apy_table, transactions_table), trigger="interval", seconds=12)
+    scheduler.add_job(lambda: collect_apy(apy_table, transactions_table), trigger="interval", seconds=5)
     scheduler.start()
 
     app.run(use_reloader=False)

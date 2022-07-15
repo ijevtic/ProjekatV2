@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import "./App.css";
-import { Button, Card, Form, Modal } from "react-bootstrap";
+import { Button, Card, Row, Col, Modal } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { abi, contractAddress } from "./constants.js";
 import CanvasJSReact from "./canvasjs.react";
@@ -16,6 +16,7 @@ function App() {
   const [baseValue, setBaseValue] = useState("0");
   const [interestValue, setInterestValue] = useState("0");
   const [apyData, setApyData] = useState([]);
+  const [addressTxData, setAddressTxData] = useState([]);
   const [modal, setModal] = useState(false);
 
   const handleClose = () => setModal(false);
@@ -160,13 +161,12 @@ function App() {
     fetch("http://127.0.0.1:5000/apy")
       .then((response) => response.json())
       .then((data) => {
-
         const jsonResult = JSON.parse(data);
         let array = [];
 
         jsonResult.forEach((obj) => {
           let date = new Date(0);
-          date.setSeconds(obj['time']);
+          date.setSeconds(obj["time"]);
           array.push({ x: date, y: obj["value"] });
         });
 
@@ -174,23 +174,14 @@ function App() {
       });
   };
 
-  // const getTx = async () => {
-  //   fetch("http://127.0.0.1:5000/transactions")
-  //     .then((response) => response.json())
-  //     .then((data) => {
-
-  //       const jsonResult = JSON.parse(data);
-  //       let array = [];
-
-  //       jsonResult.forEach((obj) => {
-  //         let date = new Date(0);
-  //         date.setSeconds(obj['time']);
-  //         array.push({ x: date, y: obj["value"] });
-  //       });
-
-  //       setApyData(array);
-  //     });
-  // };
+  const getTransactionsFromAddress = (address) => {
+    fetch("http://127.0.0.1:5000/transactions/" + address)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log(JSON.parse(data));
+        //setAddressTxData(JSON.parse(data))
+      });
+  };
 
   return (
     <div className="App">
@@ -235,6 +226,30 @@ function App() {
           <br />
 
           <CanvasJSChart options={options} />
+
+          <br />
+
+          <Button
+            onClick={() => getTransactionsFromAddress(address)}
+            variant="primary"
+          >
+            get txs
+          </Button>
+
+          <br />
+
+          <Row xs={1} md={2} className="g-4">
+            <Col>
+              <Card bg="Dark">
+                <Card.Body>
+                  <Card.Title>{}</Card.Title>
+                  <Card.Text>
+                    
+                  </Card.Text>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
 
           <Modal show={modal} onHide={handleClose}>
             <Modal.Header closeButton>
