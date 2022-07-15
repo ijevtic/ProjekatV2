@@ -11,12 +11,14 @@ describe('Yearn-view', function () {
         const MainContract = await hre.ethers.getContractFactory("MainContract");
         mainContractObj = await MainContract.deploy();
  
-        senderAcc = (await hre.ethers.getSigners())[0];
+        senderAcc1 = (await hre.ethers.getSigners())[0];
+         
+        //senderAcc2 = (await hre.ethers.getSigners())[1];
     });
 
     it('... should get pool liquidity', async () => {
 
-        await mainContractObj.stakeEther({value: 100000000});
-        await mainContractObj.extractEther();
+        await mainContractObj.stakeEther({value: 1e18});
+        // await mainContractObj.extractEther();
     });
 });

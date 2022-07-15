@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import "./App.css";
-import { Button, Card, Form } from "react-bootstrap";
+import { Button, Card, Form, Modal } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { abi, contractAddress } from "./constants.js";
 
@@ -10,6 +10,15 @@ function App() {
   const [address, setAddress] = useState("");
   const [balance, setBalance] = useState(0);
   const [poolBalance, setPoolBalance] = useState("0");
+  const [baseValue, setBaseValue] = useState("0");
+  const [interestValue, setInterestValue] = useState("0");
+  const [modal, setModal] = useState(false);
+
+  const handleClose = () => setModal(false);
+  const handleShow = async () => {
+    await calculateWithdrawAmount();
+    setModal(true);
+  };
 
   useEffect(() => {}, []);
 
@@ -92,7 +101,23 @@ function App() {
     }
   };
 
+  const calculateWithdrawAmount = async () => {
+    if (typeof window.ethereum != "undefined") {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(contractAddress, abi, signer);
+      try {
+        const result = await contract.balanceOfUser();
+        setBaseValue(ethers.utils.formatEther(result[0].toString()));
+        setInterestValue(ethers.utils.formatEther(result[1].toString()));
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
   const withdraw = async () => {
+    handleClose();
     if (typeof window.ethereum != "undefined") {
       console.log("Withdrawing...");
       const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -113,12 +138,14 @@ function App() {
     <div className="App">
       <Card className="text-center">
         <Card.Header>
-          <strong>Address: {address}</strong>
+          <strong>Wallet Address: {address}</strong>
           <br />
           <strong>Wallet Balance: {balance} ETH</strong>
         </Card.Header>
         <Card.Body>
           <Card.Text>
+            <strong>Pool Address: {contractAddress} </strong>
+            <br />
             <strong>Pool Balance: {poolBalance} aWETH </strong>
             <Button onClick={getPoolBalanceFromContract} variant="primary">
               Update
@@ -133,9 +160,28 @@ function App() {
           </Button>
           <input id="ethAmount" type="number" placeholder="0" />
           <br />
-          <Button onClick={withdraw} variant="primary">
+          <Button onClick={handleShow} variant="primary">
             Withdraw
           </Button>
+
+          <Modal show={modal} onHide={handleClose}>
+            <Modal.Header closeButton>
+              <Modal.Title>After Values</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              Base Value: {baseValue} ETH
+              <br />
+              Interest Value: {interestValue} ETH
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={handleClose}>
+                Deny
+              </Button>
+              <Button variant="primary" onClick={withdraw}>
+                Accept
+              </Button>
+            </Modal.Footer>
+          </Modal>
         </Card.Body>
       </Card>
     </div>

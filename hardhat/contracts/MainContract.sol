@@ -49,7 +49,7 @@ contract MainContract {
         _;
     }
 
-    constructor(uint256 dusanemajmune) {
+    constructor() {
         i_owner = msg.sender;
     }
 
@@ -73,6 +73,7 @@ contract MainContract {
         if (user.stakedEther == 0) {
             users.push(msg.sender);
             user.index = users.length - 1;
+            user.stakedEther = msg.value;
         } else {
             user.previousSumK += user.stakedEther * global_c * global_k / user.c / user.k - user.stakedEther * global_c / user.c;
             user.stakedEther = user.stakedEther * global_c / userStakeMapping[msg.sender].c + msg.value;
@@ -86,9 +87,7 @@ contract MainContract {
             address(this),
             0
         );
-        
 
-        
         emit Deposit(msg.sender, user.stakedEther);
     }
 
@@ -129,7 +128,6 @@ contract MainContract {
             remaining = (user.stakedEther * global_c) / user.c - withdrawAmount;
         }
 
-        uint256 lastTotalSum = totalSum;
         uint256 divide = totalSum - (user.stakedEther * global_c) / user.c;
 
         totalSum -= withdrawAmount;
@@ -140,7 +138,7 @@ contract MainContract {
                 (global_c * (MULTIPLY + (remaining * MULTIPLY) / divide)) /
                 MULTIPLY;
         }
-        //console.log(divide);
+
         // approve IWETH_GATEWAY to burn aWETH tokens
         aWETH_ERC20.approve(address(IWETH_GATEWAY), withdrawAmount);
         // trade aWETH tokens for ETH
@@ -178,24 +176,9 @@ contract MainContract {
         );
     }
 
-    function balanceOfUser() public view returns (uint256) {
-        console.log(
-            (userStakeMapping[msg.sender].stakedEther * global_c) /
-                userStakeMapping[msg.sender].c
-        );
-        console.log(global_c);
-        console.log(userStakeMapping[msg.sender].c);
-        return
-            (userStakeMapping[msg.sender].stakedEther * global_c) /
-            userStakeMapping[msg.sender].c;
-    }
-
-    function test(uint vr) public view returns(uint) {
-        return vr+1;
-    }
-
-    function testEvent(uint vr) public {
-        emit EventTest(vr);
+    function balanceOfUser() public view returns (uint256 base, uint256 interest) {
+        base = userStakeMapping[msg.sender].stakedEther * global_c / userStakeMapping[msg.sender].c;
+        interest = userStakeMapping[msg.sender].stakedEther * global_c * global_k / userStakeMapping[msg.sender].c /userStakeMapping[msg.sender].k - base;
     }
 
     receive() external payable {}
