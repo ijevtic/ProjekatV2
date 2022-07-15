@@ -27,7 +27,19 @@ function App() {
 
   useEffect(() => {
     getAPY();
+    const interval = setInterval(() => {
+      getAPY();
+      getPoolBalanceFromContract();
+    }, 10000);
+    return () => {
+      clearInterval(interval);
+    };
   }, []);
+
+  useEffect(() => {
+    getPoolBalanceFromContract();
+    getTransactionsFromAddress(address);
+  }, [address]);
 
   const connect = () => {
     if (window.ethereum) {
@@ -85,6 +97,7 @@ function App() {
         console.log("done!");
         getbalance(address);
         getPoolBalanceFromContract();
+        getTransactionsFromAddress(address);
       } catch (error) {
         console.log(error);
       }
@@ -135,6 +148,7 @@ function App() {
         await listenForTransactionMine(transactionResponse, provider);
         getbalance(address);
         getPoolBalanceFromContract();
+        getTransactionsFromAddress(address);
       } catch (error) {
         console.log(error);
       }
@@ -158,6 +172,7 @@ function App() {
   };
 
   const getAPY = async () => {
+    console.log("Fetching APY...");
     fetch("http://127.0.0.1:5000/apy")
       .then((response) => response.json())
       .then((data) => {
@@ -175,12 +190,17 @@ function App() {
   };
 
   const getTransactionsFromAddress = (address) => {
-    fetch("http://127.0.0.1:5000/transactions/" + address)
-      .then((response) => response.json())
-      .then((data) => {
-        console.log(JSON.parse(data));
-        //setAddressTxData(JSON.parse(data))
-      });
+    if (address) {
+      fetch("http://127.0.0.1:5000/transactions/" + address)
+        .then((response) => response.json())
+        .then((data) => {
+          let jsonResult = JSON.parse(data);
+          jsonResult.forEach((obj) => {
+            obj["amount"] = ethers.utils.formatEther(obj["amount"].toString());
+          });
+          setAddressTxData(jsonResult);
+        });
+    }
   };
 
   return (
@@ -201,26 +221,21 @@ function App() {
             <strong>Pool Address: {contractAddress} </strong>
             <br />
             <strong>Pool Balance: {poolBalance} aWETH </strong>
-            <Button onClick={getPoolBalanceFromContract} variant="primary">
-              Update
-            </Button>
           </Card.Text>
           <br />
-          <Button onClick={deposit} variant="primary">
-            Deposit
-          </Button>
-          <input id="ethAmount" type="number" placeholder="0" />
-          <br />
-          <Button onClick={handleShow} variant="primary">
-            Withdraw
-          </Button>
 
-          <br />
-          <br />
-
-          <Button onClick={getAPY} variant="primary">
-            Refresh APY
-          </Button>
+          {address && (
+            <div>
+              <Button onClick={deposit} variant="primary">
+                Deposit
+              </Button>
+              <input id="ethAmount" type="number" placeholder="0" />
+              <br />
+              <Button onClick={handleShow} variant="primary">
+                Withdraw
+              </Button>
+            </div>
+          )}
 
           <br />
           <br />
@@ -228,27 +243,27 @@ function App() {
           <CanvasJSChart options={options} />
 
           <br />
-
-          <Button
-            onClick={() => getTransactionsFromAddress(address)}
-            variant="primary"
-          >
-            get txs
-          </Button>
-
           <br />
 
-          <Row xs={1} md={2} className="g-4">
-            <Col>
-              <Card bg="Dark">
-                <Card.Body>
-                  <Card.Title>{}</Card.Title>
-                  <Card.Text>
-                    
-                  </Card.Text>
-                </Card.Body>
-              </Card>
-            </Col>
+          <Row xs={1} md={5} className="g-4">
+            {addressTxData.map((tx, indx) => (
+              <Col key={indx}>
+                <Card
+                  key={indx}
+                  bg="dark"
+                  text="white"
+                  style={{ width: "18rem" }}
+                >
+                  <Card.Body>
+                    <Card.Title>{tx.event}</Card.Title>
+                    Amount : {tx.amount} ETH
+                    <br />
+                    Block Number : {tx.block_number}
+                    <Card.Text></Card.Text>
+                  </Card.Body>
+                </Card>
+              </Col>
+            ))}
           </Row>
 
           <Modal show={modal} onHide={handleClose}>
