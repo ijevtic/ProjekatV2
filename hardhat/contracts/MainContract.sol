@@ -11,11 +11,10 @@ error MainContract__AccountNotOwner();
 contract MainContract {
     struct User {
         uint256 stakedEther;
+        uint256 baseEther;
         uint256 startDate;
         uint256 index;
         uint256 c;
-        uint256 k;
-        uint256 previousSumK;
     }
 
     address private immutable i_owner;
@@ -28,7 +27,6 @@ contract MainContract {
 
     uint256 totalSum = 0;
     uint256 global_c = MULTIPLY;
-    uint256 global_k = MULTIPLY;
     uint256 amountATokens = 0;
 
     IWETHGateway private constant IWETH_GATEWAY =
@@ -43,8 +41,7 @@ contract MainContract {
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(
         address indexed user,
-        uint256 amountBase,
-        uint256 amountProfit
+        uint256 amount
     );
     event EventTest(uint256 amount);
 
@@ -64,35 +61,22 @@ contract MainContract {
 
         uint256 newAmountATokens = getAWETHAddressBalance();
 
-        uint diff = newAmountATokens - amountATokens;
-
-        if (amountATokens == 0) global_k = MULTIPLY;
-        else {
-            global_k =
-                (global_k * (MULTIPLY + (diff * MULTIPLY) / amountATokens)) /
-                MULTIPLY;
-        }
         amountATokens = newAmountATokens + msg.value;
+
+        user.baseEther += msg.value;
 
         if (user.stakedEther == 0) {
             users.push(msg.sender);
             user.index = users.length - 1;
             user.stakedEther = msg.value;
-        } else {
-            user.previousSumK +=
-                (user.stakedEther * global_c * global_k) /
-                user.c /
-                user.k -
-                (user.stakedEther * global_c) /
-                user.c;
+        } else { //TODO
             user.stakedEther =
-                (user.stakedEther * global_c) /
-                userStakeMapping[msg.sender].c +
-                msg.value;
+                (user.stakedEther * global_c) / user.c + msg.value;
         }
 
+        global_c = global_c * newAmountATokens / amountATokens;
+
         user.c = global_c;
-        user.k = global_k;
 
         IWETH_GATEWAY.depositETH{value: msg.value}(
             LENDING_POOL,
@@ -110,10 +94,15 @@ contract MainContract {
 
         uint256 newAmountATokens = getAWETHAddressBalance();
 
-        uint diff = newAmountATokens - amountATokens;
-        global_k =
-            (global_k * (MULTIPLY + (diff * MULTIPLY) / amountATokens)) /
-            MULTIPLY;
+        uint256 novaKamata = global_c * newAmountATokens / amountATokens;
+
+        uint256 maxPovuce = user.stakedEther * novaKamata / user.c;
+
+        uint256 zaradjenaKamataPool = (newAmountATokens - amountATokens) - (user.stakedEther * novaKamata - user.stakedEther * global_c)/user.c;
+
+        uint256 poolStaro = amountATokens - (user.stakedEther * global_c)/user.c;
+
+        amountATokens = newAmountATokens;
 
         uint256 index = user.index;
 
@@ -129,29 +118,17 @@ contract MainContract {
             MULTIPLY /
             2;
 
-        uint256 uk = (user.stakedEther * global_c * global_k) / user.c / user.k;
-        uint256 profit = uk -
-            ((user.stakedEther * global_c) / user.c) +
-            user.previousSumK;
-
-        uint256 withdrawAmount = (user.stakedEther * global_c) / user.c;
-        uint256 remaining = 0;
+        uint256 withdrawAmount = maxPovuce;
+        uint256 smanjenje = 0;
         if (percentage < MULTIPLY) {
-            // uzmi procentualno
-            withdrawAmount = (withdrawAmount * percentage) / MULTIPLY;
-            remaining = (user.stakedEther * global_c) / user.c - withdrawAmount;
+            smanjenje = user.baseEther*(MULTIPLY - percentage) / MULTIPLY;
         }
 
-        uint256 divide = totalSum - (user.stakedEther * global_c) / user.c;
+        withdrawAmount = withdrawAmount - smanjenje;
 
-        totalSum -= withdrawAmount;
-        if (divide == 0) {
-            global_c = MULTIPLY;
-        } else {
-            global_c =
-                (global_c * (MULTIPLY + (remaining * MULTIPLY) / divide)) /
-                MULTIPLY;
-        }
+        uint256 poolNovo = poolStaro + zaradjenaKamataPool + smanjenje;
+
+        global_c = global_c * poolNovo / poolStaro;
 
         // approve IWETH_GATEWAY to burn aWETH tokens
         aWETH_ERC20.approve(address(IWETH_GATEWAY), withdrawAmount);
@@ -160,16 +137,15 @@ contract MainContract {
 
         // pay the user
         (bool sent, ) = payable(msg.sender).call{
-            value: withdrawAmount + profit
+            value: withdrawAmount
         }("");
         if (sent == false) revert();
 
-        amountATokens -= (withdrawAmount + profit);
-        user.previousSumK = 0;
+        amountATokens = amountATokens - withdrawAmount;
 
         // erase the user
         delete userStakeMapping[msg.sender];
-        emit Withdraw(msg.sender, withdrawAmount, profit);
+        emit Withdraw(msg.sender, withdrawAmount);
     }
 
     function getAWETHAddressBalance() public view returns (uint256) {
@@ -197,21 +173,8 @@ contract MainContract {
     {
         User memory user = userStakeMapping[msg.sender];
         uint256 newAmountATokens = getAWETHAddressBalance();
-        uint256 diff = newAmountATokens - amountATokens;
-        uint256 new_k = (global_k *
-            (MULTIPLY + (diff * MULTIPLY) / amountATokens)) / MULTIPLY;
-        uint256 percentage = ((block.timestamp - user.startDate) * MULTIPLY) /
-            STAKE_TIME /
-            2 +
-            MULTIPLY /
-            2;
-        uint256 uk = (user.stakedEther * global_c * new_k) / user.c / user.k;
-        interest =
-            uk -
-            ((user.stakedEther * global_c) / user.c) +
-            user.previousSumK;
-        base = (user.stakedEther * global_c) / user.c;
-        base = (base * percentage) / MULTIPLY;
+        base = 1;
+        interest = 1;
     }
 
     receive() external payable {}
