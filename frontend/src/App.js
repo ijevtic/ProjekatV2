@@ -5,6 +5,9 @@ import "./App.css";
 import { Button, Card, Form, Modal } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { abi, contractAddress } from "./constants.js";
+import CanvasJSReact from "./canvasjs.react";
+var CanvasJS = CanvasJSReact.CanvasJS;
+var CanvasJSChart = CanvasJSReact.CanvasJSChart;
 
 function App() {
   const [address, setAddress] = useState("");
@@ -134,6 +137,33 @@ function App() {
     }
   };
 
+  function generateDataPoints(noOfDps) {
+    var xVal = 1,
+      yVal = 100;
+    var dps = [];
+    for (var i = 0; i < noOfDps; i++) {
+      yVal = yVal + Math.round(5 + Math.random() * (-5 - 5));
+      dps.push({ x: xVal, y: yVal });
+      xVal++;
+    }
+    return dps;
+  }
+
+  const options = {
+    theme: "light2", // "light1", "dark1", "dark2"
+    animationEnabled: true,
+    zoomEnabled: true,
+    title: {
+      text: "Pool APY",
+    },
+    data: [
+      {
+        type: "area",
+        dataPoints: generateDataPoints(500),
+      },
+    ],
+  };
+
   return (
     <div className="App">
       <Card className="text-center">
@@ -144,6 +174,11 @@ function App() {
         </Card.Header>
         <Card.Body>
           <Card.Text>
+            <Button onClick={connect} variant="primary">
+              Connect to wallet
+            </Button>
+            <br />
+            <br />
             <strong>Pool Address: {contractAddress} </strong>
             <br />
             <strong>Pool Balance: {poolBalance} aWETH </strong>
@@ -151,9 +186,6 @@ function App() {
               Update
             </Button>
           </Card.Text>
-          <Button onClick={connect} variant="primary">
-            Connect to wallet
-          </Button>
           <br />
           <Button onClick={deposit} variant="primary">
             Deposit
@@ -163,6 +195,11 @@ function App() {
           <Button onClick={handleShow} variant="primary">
             Withdraw
           </Button>
+          
+          <br />
+          <br />
+
+          <CanvasJSChart options={options} />
 
           <Modal show={modal} onHide={handleClose}>
             <Modal.Header closeButton>

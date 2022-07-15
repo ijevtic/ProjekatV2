@@ -41,7 +41,11 @@ contract MainContract {
         ERC20(0x87b1f4cf9BD63f7BBD3eE1aD04E8F52540349347);
 
     event Deposit(address indexed user, uint256 amount);
-    event Withdraw(address indexed user, uint256 amountBase, uint256 amountProfit);
+    event Withdraw(
+        address indexed user,
+        uint256 amountBase,
+        uint256 amountProfit
+    );
     event EventTest(uint256 amount);
 
     modifier onlyOwner() {
@@ -75,8 +79,16 @@ contract MainContract {
             user.index = users.length - 1;
             user.stakedEther = msg.value;
         } else {
-            user.previousSumK += user.stakedEther * global_c * global_k / user.c / user.k - user.stakedEther * global_c / user.c;
-            user.stakedEther = user.stakedEther * global_c / userStakeMapping[msg.sender].c + msg.value;
+            user.previousSumK +=
+                (user.stakedEther * global_c * global_k) /
+                user.c /
+                user.k -
+                (user.stakedEther * global_c) /
+                user.c;
+            user.stakedEther =
+                (user.stakedEther * global_c) /
+                userStakeMapping[msg.sender].c +
+                msg.value;
         }
 
         user.c = global_c;
@@ -118,7 +130,9 @@ contract MainContract {
             2;
 
         uint256 uk = (user.stakedEther * global_c * global_k) / user.c / user.k;
-        uint256 profit = uk - ((user.stakedEther * global_c) / user.c) + user.previousSumK;
+        uint256 profit = uk -
+            ((user.stakedEther * global_c) / user.c) +
+            user.previousSumK;
 
         uint256 withdrawAmount = (user.stakedEther * global_c) / user.c;
         uint256 remaining = 0;
@@ -176,9 +190,28 @@ contract MainContract {
         );
     }
 
-    function balanceOfUser() public view returns (uint256 base, uint256 interest) {
-        base = userStakeMapping[msg.sender].stakedEther * global_c / userStakeMapping[msg.sender].c;
-        interest = userStakeMapping[msg.sender].stakedEther * global_c * global_k / userStakeMapping[msg.sender].c /userStakeMapping[msg.sender].k - base;
+    function balanceOfUser()
+        public
+        view
+        returns (uint256 base, uint256 interest)
+    {
+        User memory user = userStakeMapping[msg.sender];
+        uint256 newAmountATokens = getAWETHAddressBalance();
+        uint256 diff = newAmountATokens - amountATokens;
+        uint256 new_k = (global_k *
+            (MULTIPLY + (diff * MULTIPLY) / amountATokens)) / MULTIPLY;
+        uint256 percentage = ((block.timestamp - user.startDate) * MULTIPLY) /
+            STAKE_TIME /
+            2 +
+            MULTIPLY /
+            2;
+        uint256 uk = (user.stakedEther * global_c * new_k) / user.c / user.k;
+        interest =
+            uk -
+            ((user.stakedEther * global_c) / user.c) +
+            user.previousSumK;
+        base = (user.stakedEther * global_c) / user.c;
+        base = (base * percentage) / MULTIPLY;
     }
 
     receive() external payable {}
