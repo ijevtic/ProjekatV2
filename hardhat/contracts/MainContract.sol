@@ -28,6 +28,7 @@ contract MainContract {
     uint256 totalSum = 0;
     uint256 global_c = MULTIPLY;
     uint256 amountATokens = 0;
+    uint256 ukupnaKamata = 0;
 
     IWETHGateway private constant IWETH_GATEWAY =
         IWETHGateway(0xA61ca04DF33B72b235a8A28CfB535bb7A5271B70);
@@ -64,7 +65,7 @@ contract MainContract {
         uint256 newAmountATokens = getAWETHAddressBalance();
         uint256 oldAmountATokens = amountATokens;
         
-        
+        ukupnaKamata = ukupnaKamata + (newAmountATokens - oldAmountATokens);        
 
         user.baseEther += msg.value;
 
@@ -106,7 +107,11 @@ contract MainContract {
 
         uint256 maxPovuce = user.stakedEther * novaKamata / user.c;
 
-        uint256 zaradjenaKamataPool = (newAmountATokens - amountATokens) - (user.stakedEther * novaKamata - user.stakedEther * global_c)/user.c;
+        uint256 userKamata = (user.stakedEther * novaKamata - user.stakedEther * global_c)/user.c;
+
+        ukupnaKamata += userKamata;
+
+        uint256 zaradjenaKamataPool = (newAmountATokens - amountATokens) - userKamata;
 
         uint256 poolStaro = amountATokens - (user.stakedEther * global_c)/user.c;
 
@@ -172,13 +177,17 @@ contract MainContract {
     }
 
     function ownerWithdraw() public onlyOwner {
-        uint256 accumulatedInterestRate = getAWETHAddressBalance() - totalSum;
-        aWETH_ERC20.approve(address(IWETH_GATEWAY), accumulatedInterestRate);
+        uint256 newAmountATokens = getAWETHAddressBalance();
+        ukupnaKamata = ukupnaKamata + (newAmountATokens - amountATokens);
+
+        aWETH_ERC20.approve(address(IWETH_GATEWAY), ukupnaKamata);
         IWETH_GATEWAY.withdrawETH(
             LENDING_POOL,
-            accumulatedInterestRate,
+            ukupnaKamata,
             address(this)
         );
+        amountATokens = newAmountATokens - ukupnaKamata;
+        ukupnaKamata = 0;
     }
 
     function balanceOfContractATokens() public returns(uint) {
@@ -190,12 +199,12 @@ contract MainContract {
     function balanceOfUser()
         public
         view
-        returns (uint256 base, uint256 interest)
+        returns (uint256 amount)
     {
         User memory user = userStakeMapping[msg.sender];
         uint256 newAmountATokens = getAWETHAddressBalance();
-        base = 1;
-        interest = 1;
+        uint256 novaKamata = global_c * newAmountATokens / amountATokens;
+        amount = user.stakedEther * novaKamata / user.c;
     }
 
     receive() external payable {}
