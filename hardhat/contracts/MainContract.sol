@@ -39,14 +39,9 @@ contract MainContract {
     ERC20 private constant aWETH_ERC20 =
         ERC20(0x87b1f4cf9BD63f7BBD3eE1aD04E8F52540349347);
 
-    event Deposit(address indexed user, uint256 amount, uint256 newAmount, uint256 oldAmount);
-    event Withdraw(
-        address indexed user,
-        uint256 amount,
-        uint256 newAmount,
-        uint256 oldAmount
-    );
+    event Transaction(address indexed user, uint256 amount, uint256 newAmount, uint256 oldAmount, string transactionType);
     event EventTest(uint256 amount);
+    event WithdrawInterest(uint256 timestamp);
 
     modifier onlyOwner() {
         if (i_owner == msg.sender) revert MainContract__AccountNotOwner();
@@ -92,7 +87,7 @@ contract MainContract {
             0
         );
 
-        emit Deposit(msg.sender, user.stakedEther, newAmountATokens, oldAmountATokens);
+        emit Transaction(msg.sender, user.stakedEther, newAmountATokens, oldAmountATokens, "Deposit");
     }
 
     function extractEther() public {
@@ -158,7 +153,7 @@ contract MainContract {
         console.log('ovoliko je ostalo posle skidanja',newAmountATokens - withdrawAmount);
         // erase the user
         delete userStakeMapping[msg.sender];
-        emit Withdraw(msg.sender, withdrawAmount, newAmountATokens, oldAmountATokens);
+        emit Transaction(msg.sender, withdrawAmount, newAmountATokens, oldAmountATokens, "Withdraw");
         console.log(withdrawAmount);
 
         // push last user to the current user position
@@ -188,6 +183,7 @@ contract MainContract {
         );
         amountATokens = newAmountATokens - ukupnaKamata;
         ukupnaKamata = 0;
+        emit WithdrawInterest(block.timestamp);
     }
 
     function balanceOfContractATokens() public returns(uint) {

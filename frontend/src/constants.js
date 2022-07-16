@@ -1,4 +1,4 @@
-export const contractAddress = "0x325B591E8B707F97383c7a5bC4D24F45c4a3e4B8";
+export const contractAddress = "0x4b64E4a4c0D3116fb704189bacCaaFA6d2f9147d";
 export const abi = [
   { inputs: [], stateMutability: "nonpayable", type: "constructor" },
   { inputs: [], name: "MainContract__AccountNotOwner", type: "error" },
@@ -6,7 +6,6 @@ export const abi = [
   {
     anonymous: false,
     inputs: [
-      { indexed: true, internalType: "address", name: "user", type: "address" },
       {
         indexed: false,
         internalType: "uint256",
@@ -14,7 +13,7 @@ export const abi = [
         type: "uint256",
       },
     ],
-    name: "Deposit",
+    name: "EventTest",
     type: "event",
   },
   {
@@ -27,17 +26,52 @@ export const abi = [
         name: "amount",
         type: "uint256",
       },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "newAmount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "oldAmount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "transactionType",
+        type: "string",
+      },
     ],
-    name: "Withdraw",
+    name: "Transaction",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "timestamp",
+        type: "uint256",
+      },
+    ],
+    name: "WithdrawInterest",
     type: "event",
   },
   {
     inputs: [],
+    name: "balanceOfContractATokens",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "balanceOfUser",
-    outputs: [
-      { internalType: "uint256", name: "base", type: "uint256" },
-      { internalType: "uint256", name: "interest", type: "uint256" },
-    ],
+    outputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },
@@ -81,10 +115,10 @@ export const abi = [
     name: "userStakeMapping",
     outputs: [
       { internalType: "uint256", name: "stakedEther", type: "uint256" },
+      { internalType: "uint256", name: "baseEther", type: "uint256" },
       { internalType: "uint256", name: "startDate", type: "uint256" },
       { internalType: "uint256", name: "index", type: "uint256" },
       { internalType: "uint256", name: "c", type: "uint256" },
-      { internalType: "uint256", name: "k", type: "uint256" },
     ],
     stateMutability: "view",
     type: "function",

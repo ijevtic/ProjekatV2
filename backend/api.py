@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import bson.json_util as json_util
 from flask_cors import CORS
 from pymongo import MongoClient
+from calculate import calculate_base_interest
 
 app = Flask(__name__)
 CORS(app)
@@ -19,16 +20,21 @@ api = Api(app)
 
 array_apy = []
 users_transaction_history = dict()
+transactions = []
+
 
 class Object(object):
     pass
+
 
 class APY(Resource):
     def get(self):
         return json_util.dumps(array_apy)
 
+
 class TRANSACTIONS(Resource):
     global users_transaction_history
+
     def get(self, address):
         if address not in users_transaction_history:
             users_transaction_history[address] = []
@@ -37,7 +43,6 @@ class TRANSACTIONS(Resource):
         print(users_transaction_history[address])
         print(type(users_transaction_history))
         return json_util.dumps(users_transaction_history[address])
-
 
 
 api.add_resource(APY, '/apy')
@@ -50,59 +55,80 @@ SECONDS_PER_YEAR = 31536000
 provider_url = 'https://kovan.infura.io/v3/75fe0c9d66ad48a7ba1e3c5ca2ac94a9'
 
 w3 = Web3(Web3.HTTPProvider(provider_url))
-contract_aave = w3.eth.contract(address = "0xE0fBa4Fc209b4948668006B2bE61711b7f465bAe", abi = abi_aave)
-contract_main = w3.eth.contract(address = "0x325B591E8B707F97383c7a5bC4D24F45c4a3e4B8", abi = abi_main_contract)
+contract_aave = w3.eth.contract(
+    address="0xE0fBa4Fc209b4948668006B2bE61711b7f465bAe", abi=abi_aave)
+contract_main = w3.eth.contract(
+    address="0x4b64E4a4c0D3116fb704189bacCaaFA6d2f9147d", abi=abi_main_contract)
 
 
-event_filter1 = contract_main.events.Deposit.createFilter(fromBlock='latest')
-event_filter2 = contract_main.events.Withdraw.createFilter(fromBlock='latest')
+transaction_filter = contract_main.events.Transaction.createFilter(
+    fromBlock='latest')
+withdraw_filter = contract_main.events.WithdrawInterest.createFilter(
+    fromBlock='latest')
+
 
 def get_database():
-    # Provide the mongodb atlas url to connect python to mongodb using pymongo
+
     load_dotenv()
 
     CONNECTION_STRING = os.getenv('CONNECTION_STRING')
-    # Create a connection using MongoClient. You can import MongoClient or use pymongo.MongoClient
+
     client = MongoClient(CONNECTION_STRING)
 
-    # Create the database for our example (we will use the same database throughout the tutorial
     return client['ProjekatV2']
 
-def create_transaction_object(jsonEvent, table):
+
+def get_object(json_object):
+    return {
+        "user": json_object['args']['user'].lower(),
+        "amount": json_object['args']['amount'],
+        "event": json_object['transactionType'],
+        "block_number": json_object['blockNumber'],
+        # "oldAmount": json_object['args']['oldAmount'],
+        # "newAmount": json_object['args']['newAmount']
+    }
+
+
+def create_transaction_object(jsonEvent, table, type):
     x = Object()
     json_object = json.loads(jsonEvent)
-    row = {
-    "user": json_object['args']['user'].lower(),
-    "amount": json_object['args']['amount'],
-    "event": json_object['event'],
-    "block_number": json_object['blockNumber']
-    }
+    row = dict()
+    x = dict()
+    if type == "transaction":
+        row = get_object(json_object)
+        x = get_object(json_object)
+    else:
+        row = {"event": "WithdrawInterest",
+               "block_number": json_object['blockNumber']}
+        x = {"event": "WithdrawInterest",
+             "block_number": json_object['blockNumber']}
     table.insert_one(row)
 
-    x = {
-    "amount": row['amount'],
-    "event": row['event'],
-    "block_number": row['block_number']
-    }
+    if(x["user"] not in users_transaction_history):
+        users_transaction_history[x["user"]] = []
+    users_transaction_history[x["user"]].append(x)
+    # if x["event"] == "Withdraw":
+    #     base, interest = calculate_base_interest()
+    transactions.append(x)
 
-
-    if(row["user"] not in users_transaction_history):
-            users_transaction_history[row["user"]] = []
-    users_transaction_history[row["user"]].append(x)
 
 def collect_apy(apy_table, transactions_table):
-    _,_,_,liq_rate,_,_,_,_,_,_,_,_ = contract_aave.functions.getReserveData('0xd0A1E359811322d97991E03f863a0C30C2cF029C').call()
+    _, _, _, liq_rate, _, _, _, _, _, _, _, _ = contract_aave.functions.getReserveData(
+        '0xd0A1E359811322d97991E03f863a0C30C2cF029C').call()
     depositAPR = liq_rate/RAY
-    depositAPY = ((1 + (depositAPR / SECONDS_PER_YEAR)) ** SECONDS_PER_YEAR) - 1
+    depositAPY = ((1 + (depositAPR / SECONDS_PER_YEAR))
+                  ** SECONDS_PER_YEAR) - 1
     row = {"time": time.time(), "value": depositAPY}
     array_apy.append(row)
     apy_table.insert_one(row)
 
-    for deposit in event_filter1.get_new_entries():
-        create_transaction_object(Web3.toJSON(deposit), transactions_table)
-    
-    for withdraw in event_filter2.get_new_entries():
-        create_transaction_object(Web3.toJSON(withdraw), transactions_table)
+    for transaction in transaction_filter.get_new_entries():
+        create_transaction_object(Web3.toJSON(
+            transaction), transactions_table, "transaction")
+    for transaction in withdraw_filter.get_new_entries():
+        create_transaction_object(Web3.toJSON(
+            transaction), transactions_table, "WithdrawInterest")
+
 
 if __name__ == '__main__':
     dbname = get_database()
@@ -113,15 +139,30 @@ if __name__ == '__main__':
     transactions_cursor = transactions_table.find()
 
     for apy in apy_cursor:
-        array_apy.append({"time":apy["time"], "value": apy["value"]})
-    
+        array_apy.append({"time": apy["time"], "value": apy["value"]})
+
     for t in transactions_cursor:
-        if t["user"] not in users_transaction_history:
-            users_transaction_history[t["user"]] = []
-        users_transaction_history[t["user"]].append({"amount": t["amount"], "event": t["event"], "block_number": t["block_number"]})
-    
+        if t["event"] == "WithdrawInterest":
+            transactions.append(
+                {"event": "WithdrawInterest", "block_number": t["block_number"]})
+        else:
+            if t["user"] not in users_transaction_history:
+                users_transaction_history[t["user"]] = []
+            transaction = {"amount": t["amount"],
+            #  "newAmount": t["newAmount"],
+            #                "oldAmount": t["oldAmount"],
+                            "event": t["event"], "block_number": t["block_number"]}
+            # if t["event"] == "Withdraw":
+            #     transaction["base"] = t["base"]
+            #     transaction["interest"] = t["interest"]
+            users_transaction_history[t["user"]].append(transaction)
+            transactions.append(transaction)
+    for t in transactions:
+        print(t["block_number"])
+
     scheduler = BackgroundScheduler()
-    scheduler.add_job(lambda: collect_apy(apy_table, transactions_table), trigger="interval", seconds=5)
+    scheduler.add_job(lambda: collect_apy(
+        apy_table, transactions_table), trigger="interval", seconds=10)
     scheduler.start()
 
     app.run(use_reloader=False)
