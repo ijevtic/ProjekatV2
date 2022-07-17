@@ -20,7 +20,7 @@ contract MainContract {
     address private immutable i_owner;
 
     uint256 STAKE_TIME = 0 seconds;
-    uint256 constant MULTIPLY = 1e30;
+    uint256 constant MULTIPLY = 1e18;
 
     address[] public users; //active users
     mapping(address => User) public userStakeMapping;
@@ -98,11 +98,15 @@ contract MainContract {
         uint256 newAmountATokens = getAWETHAddressBalance();
         uint256 oldAmountATokens = amountATokens;
 
-        uint256 novaKamata = global_c * newAmountATokens / amountATokens;
+        uint256 novaKamata = global_c * newAmountATokens * user.stakedEther/ amountATokens;
 
-        uint256 maxPovuce = user.stakedEther * novaKamata / user.c;
+        uint256 maxPovuce = novaKamata / user.c;
 
-        uint256 userKamata = (user.stakedEther * novaKamata - user.stakedEther * global_c)/user.c;
+        console.log("maxPovuce", maxPovuce);
+
+        uint256 userKamata = (novaKamata - user.stakedEther * global_c)/user.c;
+
+        console.log("userKamata", userKamata);
 
         ukupnaKamata += userKamata;
 
@@ -199,8 +203,9 @@ contract MainContract {
     {
         User memory user = userStakeMapping[msg.sender];
         uint256 newAmountATokens = getAWETHAddressBalance();
-        uint256 novaKamata = global_c * newAmountATokens / amountATokens;
-        amount = user.stakedEther * novaKamata / user.c;
+        amount = (user.stakedEther * global_c * newAmountATokens) / amountATokens;
+        amount = amount / user.c;
+        console.log(amount);
     }
 
     receive() external payable {}
