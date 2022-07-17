@@ -197,6 +197,11 @@ function App() {
           let jsonResult = JSON.parse(data);
           jsonResult.forEach((obj) => {
             obj["amount"] = ethers.utils.formatEther(obj["amount"].toString());
+            console.log(obj);
+            if(obj["event"] === "Withdraw"){
+              console.log("Withdraw AAAAAAAAAAAAaa");
+              console.log(obj["base"], obj["interest"]);
+            }
           });
           setAddressTxData(jsonResult);
         });
@@ -259,6 +264,9 @@ function App() {
                     Amount : {tx.amount} ETH
                     <br />
                     Block Number : {tx.block_number}
+                    <br />
+                    {tx.event ==="Withdraw" && <>Earned from withdrawals: {parseInt(tx.base)} <br /></>}
+                    {tx.event ==="Withdraw" && <>Earned from interest: {parseInt(tx.interest)}</>}
                     <Card.Text></Card.Text>
                   </Card.Body>
                 </Card>

@@ -58,7 +58,7 @@ w3 = Web3(Web3.HTTPProvider(provider_url))
 contract_aave = w3.eth.contract(
     address="0xE0fBa4Fc209b4948668006B2bE61711b7f465bAe", abi=abi_aave)
 contract_main = w3.eth.contract(
-    address="0x4b64E4a4c0D3116fb704189bacCaaFA6d2f9147d", abi=abi_main_contract)
+    address="0xD247fE4b1508709b3Bbb0582dE9ec588d23Bf1Dc", abi=abi_main_contract)
 
 
 transaction_filter = contract_main.events.Transaction.createFilter(
@@ -82,10 +82,12 @@ def get_object(json_object):
     return {
         "user": json_object['args']['user'].lower(),
         "amount": json_object['args']['amount'],
-        "event": json_object['transactionType'],
+        "event": json_object['args']['transactionType'],
         "block_number": json_object['blockNumber'],
-        # "oldAmount": json_object['args']['oldAmount'],
-        # "newAmount": json_object['args']['newAmount']
+        "oldAmount": json_object['args']['oldAmount'],
+        "newAmount": json_object['args']['newAmount'],
+        "old_c": json_object['args']['old_c'],
+        "new_c": json_object['args']['new_c']
     }
 
 
@@ -94,6 +96,7 @@ def create_transaction_object(jsonEvent, table, type):
     json_object = json.loads(jsonEvent)
     row = dict()
     x = dict()
+    print(json_object)
     if type == "transaction":
         row = get_object(json_object)
         x = get_object(json_object)
@@ -102,14 +105,21 @@ def create_transaction_object(jsonEvent, table, type):
                "block_number": json_object['blockNumber']}
         x = {"event": "WithdrawInterest",
              "block_number": json_object['blockNumber']}
-    table.insert_one(row)
+
+    if x["event"] == "Withdraw":
+        base, interest = calculate_base_interest(transactions, x)
+        x["base"] = base
+        x["interest"] = interest
+        row["base"] = base
+        row["interest"] = interest
 
     if(x["user"] not in users_transaction_history):
         users_transaction_history[x["user"]] = []
     users_transaction_history[x["user"]].append(x)
-    # if x["event"] == "Withdraw":
-    #     base, interest = calculate_base_interest()
+
     transactions.append(x)
+
+    table.insert_one(row)
 
 
 def collect_apy(apy_table, transactions_table):
@@ -149,12 +159,12 @@ if __name__ == '__main__':
             if t["user"] not in users_transaction_history:
                 users_transaction_history[t["user"]] = []
             transaction = {"amount": t["amount"],
-            #  "newAmount": t["newAmount"],
-            #                "oldAmount": t["oldAmount"],
-                            "event": t["event"], "block_number": t["block_number"]}
-            # if t["event"] == "Withdraw":
-            #     transaction["base"] = t["base"]
-            #     transaction["interest"] = t["interest"]
+                           "newAmount": t["newAmount"],
+                           "oldAmount": t["oldAmount"],
+                           "event": t["event"], "block_number": t["block_number"], "old_c": t["old_c"], "new_c": t["new_c"]}
+            if t["event"] == "Withdraw":
+                transaction["base"] = t["base"]
+                transaction["interest"] = t["interest"]
             users_transaction_history[t["user"]].append(transaction)
             transactions.append(transaction)
     for t in transactions:
@@ -162,7 +172,7 @@ if __name__ == '__main__':
 
     scheduler = BackgroundScheduler()
     scheduler.add_job(lambda: collect_apy(
-        apy_table, transactions_table), trigger="interval", seconds=10)
+        apy_table, transactions_table), trigger="interval", seconds=5)
     scheduler.start()
 
     app.run(use_reloader=False)

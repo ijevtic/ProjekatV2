@@ -4,7 +4,9 @@ require("@nomiclabs/hardhat-waffle");
 module.exports = {
   defaultNetwork: "kovan",
   networks: {
-    hardhat: {},
+    hardhat: {
+      blockGasLimit: 100000042972000
+    },
     kovan: {
       url: "https://kovan.infura.io/v3/75fe0c9d66ad48a7ba1e3c5ca2ac94a9",
       accounts: ["3d252d8dc083bef59f664faae8ff7dcc045a7f15414409498a96a03e756a38fc"],

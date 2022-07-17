@@ -20,7 +20,7 @@ contract MainContract {
     address private immutable i_owner;
 
     uint256 STAKE_TIME = 2 seconds;
-    uint256 constant MULTIPLY = 1e30;
+    uint256 constant MULTIPLY = 1e18;
 
     address[] public users; //active users
     mapping(address => User) public userStakeMapping;
@@ -39,7 +39,7 @@ contract MainContract {
     ERC20 private constant aWETH_ERC20 =
         ERC20(0x87b1f4cf9BD63f7BBD3eE1aD04E8F52540349347);
 
-    event Transaction(address indexed user, uint256 amount, uint256 newAmount, uint256 oldAmount, string transactionType, uint oldGlobalC, uint newGlobalC);
+    event Transaction(address indexed user, uint256 amount, uint256 newAmount, uint256 oldAmount, string transactionType, uint256 old_c, uint256 new_c);
     event EventTest(uint256 amount);
     event WithdrawInterest(uint256 timestamp);
 
@@ -53,18 +53,35 @@ contract MainContract {
     }
 
     function stakeEther() public payable {
+        console.log('stake ether');
         User storage user = userStakeMapping[msg.sender];
+        console.log("user.c", user.c, "stakedEther", user.stakedEther);
         totalSum += msg.value;
         user.startDate = block.timestamp;
 
         uint256 newAmountATokens = getAWETHAddressBalance();
         uint256 oldAmountATokens = amountATokens;
+        console.log(newAmountATokens, oldAmountATokens);
+        if(newAmountATokens < oldAmountATokens) {
+            newAmountATokens = oldAmountATokens;
+        }
         
         ukupnaKamata = ukupnaKamata + (newAmountATokens - oldAmountATokens);
 
-        uint256 oldGlobalC = global_c; 
 
         user.baseEther += msg.value;
+
+        uint256 old_c = global_c;
+
+        if(users.length==0) {
+            global_c = MULTIPLY;
+            user.c = MULTIPLY;
+            console.log("prazna lista");
+        }
+        else {
+            global_c = global_c * newAmountATokens / amountATokens;
+            console.log("ovo je global_c", global_c);
+        }
 
         if (user.stakedEther == 0) {
             users.push(msg.sender);
@@ -75,10 +92,7 @@ contract MainContract {
                 (user.stakedEther * global_c) / user.c + msg.value;
         }
 
-        if(newAmountATokens==0)
-            global_c = MULTIPLY;
-        else
-            global_c = global_c * newAmountATokens / amountATokens;
+        
 
         amountATokens = newAmountATokens + msg.value;
         user.c = global_c;
@@ -89,7 +103,7 @@ contract MainContract {
             0
         );
 
-        emit Transaction(msg.sender, msg.value, newAmountATokens, oldAmountATokens, "Deposit", oldGlobalC, global_c);
+        emit Transaction(msg.sender, msg.value, newAmountATokens, oldAmountATokens, "Deposit", old_c, global_c);
     }
 
     function extractEther() public {
@@ -97,20 +111,15 @@ contract MainContract {
 
         if (user.stakedEther == 0) revert MainContract__StakerNotFound();
 
-        uint256 oldGlobalC = global_c;
-
         uint256 newAmountATokens = getAWETHAddressBalance();
         uint256 oldAmountATokens = amountATokens;
 
         uint256 novaKamata = global_c * newAmountATokens * user.stakedEther/ amountATokens;
 
-        // uint256 maxPovuce = novaKamata / user.c;
-        uint256 maxPovuce = novaKamata;
-
-        console.log("maxPovuce", maxPovuce);
-
         // uint256 userKamata = (novaKamata - user.stakedEther * global_c)/user.c;
         uint256 userKamata = (novaKamata - user.stakedEther * global_c);
+
+        uint256 old_c = global_c;
 
         console.log("userKamata", userKamata);
 
@@ -122,8 +131,6 @@ contract MainContract {
         // uint256 poolStaro = amountATokens - (user.stakedEther * global_c)/user.c;
         uint256 poolStaro = amountATokens * user.c - (user.stakedEther * global_c);
 
-        amountATokens = newAmountATokens;
-
         uint256 percentage = MULTIPLY;
         if(STAKE_TIME > 0) {
             percentage = ((block.timestamp - user.startDate) * MULTIPLY) /
@@ -134,7 +141,7 @@ contract MainContract {
         }
         
         console.log("percentage", percentage);
-        uint256 withdrawAmount = maxPovuce;
+        uint256 withdrawAmount = novaKamata;
         uint256 smanjenje = 0;
         if (percentage < MULTIPLY) {
             // smanjenje = user.baseEther*(MULTIPLY - percentage) / MULTIPLY;
@@ -150,11 +157,13 @@ contract MainContract {
         else
             global_c = global_c * poolNovo / poolStaro;
 
-        // approve IWETH_GATEWAY to burn aWETH tokens
         withdrawAmount = withdrawAmount / user.c; // dodao kasnije, potencijalno za brisanje
 
         aWETH_ERC20.approve(address(IWETH_GATEWAY), withdrawAmount);
-        // trade aWETH tokens for ETH
+        
+        //zasto je pre skidanja 1 a kad se skine 0
+        
+        // console.log("pre skidanja", newAmountATokens-withdrawAmount);
         IWETH_GATEWAY.withdrawETH(LENDING_POOL, withdrawAmount, address(this));
         // pay the user
         (bool sent, ) = payable(msg.sender).call{
@@ -162,19 +171,20 @@ contract MainContract {
         }("");
         if (sent == false) revert();
 
-        amountATokens = amountATokens - withdrawAmount;
+        amountATokens = newAmountATokens - withdrawAmount;
 
-        console.log('ovoliko je ostalo posle skidanja',newAmountATokens - withdrawAmount);
+        console.log('ovoliko je ostalo posle skidanja',amountATokens, newAmountATokens);
         // erase the user
         delete userStakeMapping[msg.sender];
-        emit Transaction(msg.sender, withdrawAmount, newAmountATokens, oldAmountATokens, "Withdraw", oldGlobalC, global_c);
-        console.log(withdrawAmount);
-
+        
         // push last user to the current user position
         address lastUser = users[users.length - 1];
         users[user.index] = lastUser;
         userStakeMapping[lastUser].index = user.index;
         users.pop();
+
+        emit Transaction(msg.sender, withdrawAmount, newAmountATokens, oldAmountATokens, "Withdraw", old_c, global_c);
+
     }
 
     function getAWETHAddressBalance() public view returns (uint256) {
@@ -198,12 +208,6 @@ contract MainContract {
         amountATokens = newAmountATokens - ukupnaKamata;
         ukupnaKamata = 0;
         emit WithdrawInterest(block.timestamp);
-    }
-
-    function balanceOfContractATokens() public returns(uint) {
-        uint val = getAWETHAddressBalance();
-        console.log('u kasi trenutno', val);
-        return val;
     }
 
     function balanceOfUser()
