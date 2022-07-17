@@ -24,20 +24,20 @@ describe('Yearn-view', function () {
 
         for(let i =0; i < 5; i++) {
 
-            await mainContractObj.connect(senderAccounts[0]).stakeEther({value: ethers.utils.parseEther("0.005")});
-            await mainContractObj.connect(senderAccounts[0]).extractEther();
             // await mainContractObj.connect(senderAccounts[0]).stakeEther({value: ethers.utils.parseEther("0.005")});
-            // await mainContractObj.connect(senderAccounts[1]).stakeEther({value: ethers.utils.parseEther("0.01")});
-            // await mainContractObj.connect(senderAccounts[2]).stakeEther({value: ethers.utils.parseEther("0.005")});
-
-            // await mainContractObj.connect(senderAccounts[1]).extractEther();
-            // await mainContractObj.connect(senderAccounts[0]).stakeEther({value: ethers.utils.parseEther("0.005")});
-            // await mainContractObj.connect(senderAccounts[2]).extractEther();
-
-            // await delay(3000);
             // await mainContractObj.connect(senderAccounts[0]).extractEther();
+            await mainContractObj.connect(senderAccounts[0]).stakeEther({value: ethers.utils.parseEther("0.00005")});
+            await mainContractObj.connect(senderAccounts[1]).stakeEther({value: ethers.utils.parseEther("0.0001")});
+            await mainContractObj.connect(senderAccounts[2]).stakeEther({value: ethers.utils.parseEther("0.00005")});
 
-            // await mainContractObj.connect(senderAccounts[0]).balanceOfContractATokens();
+            await mainContractObj.connect(senderAccounts[1]).extractEther();
+            await mainContractObj.connect(senderAccounts[0]).stakeEther({value: ethers.utils.parseEther("0.00005")});
+            await mainContractObj.connect(senderAccounts[2]).extractEther();
+
+            await delay(3000);
+            await mainContractObj.connect(senderAccounts[0]).extractEther();
+
+            await mainContractObj.connect(senderAccounts[0]).balanceOfContractATokens();
         }
         // for(let i = 0; i < 10; i++) {
         //     await mainContractObj.connect(senderAccounts[0]).stakeEther({value: ethers.utils.parseEther("10")});

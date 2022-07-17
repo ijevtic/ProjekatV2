@@ -19,7 +19,7 @@ contract MainContract {
 
     address private immutable i_owner;
 
-    uint256 STAKE_TIME = 0 seconds;
+    uint256 STAKE_TIME = 2 seconds;
     uint256 constant MULTIPLY = 1e30;
 
     address[] public users; //active users
@@ -39,7 +39,7 @@ contract MainContract {
     ERC20 private constant aWETH_ERC20 =
         ERC20(0x87b1f4cf9BD63f7BBD3eE1aD04E8F52540349347);
 
-    event Transaction(address indexed user, uint256 amount, uint256 newAmount, uint256 oldAmount, string transactionType);
+    event Transaction(address indexed user, uint256 amount, uint256 newAmount, uint256 oldAmount, string transactionType, uint oldGlobalC, uint newGlobalC);
     event EventTest(uint256 amount);
     event WithdrawInterest(uint256 timestamp);
 
@@ -60,7 +60,9 @@ contract MainContract {
         uint256 newAmountATokens = getAWETHAddressBalance();
         uint256 oldAmountATokens = amountATokens;
         
-        ukupnaKamata = ukupnaKamata + (newAmountATokens - oldAmountATokens);        
+        ukupnaKamata = ukupnaKamata + (newAmountATokens - oldAmountATokens);
+
+        uint256 oldGlobalC = global_c; 
 
         user.baseEther += msg.value;
 
@@ -87,13 +89,15 @@ contract MainContract {
             0
         );
 
-        emit Transaction(msg.sender, user.stakedEther, newAmountATokens, oldAmountATokens, "Deposit");
+        emit Transaction(msg.sender, msg.value, newAmountATokens, oldAmountATokens, "Deposit", oldGlobalC, global_c);
     }
 
     function extractEther() public {
         User storage user = userStakeMapping[msg.sender];
 
         if (user.stakedEther == 0) revert MainContract__StakerNotFound();
+
+        uint256 oldGlobalC = global_c;
 
         uint256 newAmountATokens = getAWETHAddressBalance();
         uint256 oldAmountATokens = amountATokens;
@@ -113,7 +117,7 @@ contract MainContract {
         ukupnaKamata += userKamata;
 
         // uint256 zaradjenaKamataPool = (newAmountATokens - amountATokens) - userKamata;
-        uint256 zaradjenaKamataPool = (newAmountATokens - amountATokens) * user.c - userKamat;
+        uint256 zaradjenaKamataPool = (newAmountATokens - amountATokens) * user.c - userKamata;
 
         // uint256 poolStaro = amountATokens - (user.stakedEther * global_c)/user.c;
         uint256 poolStaro = amountATokens * user.c - (user.stakedEther * global_c);
@@ -163,7 +167,7 @@ contract MainContract {
         console.log('ovoliko je ostalo posle skidanja',newAmountATokens - withdrawAmount);
         // erase the user
         delete userStakeMapping[msg.sender];
-        emit Transaction(msg.sender, withdrawAmount, newAmountATokens, oldAmountATokens, "Withdraw");
+        emit Transaction(msg.sender, withdrawAmount, newAmountATokens, oldAmountATokens, "Withdraw", oldGlobalC, global_c);
         console.log(withdrawAmount);
 
         // push last user to the current user position
