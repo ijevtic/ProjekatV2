@@ -20,7 +20,7 @@ contract MainContract {
     address private immutable i_owner;
 
     uint256 STAKE_TIME = 0 seconds;
-    uint256 constant MULTIPLY = 1e18;
+    uint256 constant MULTIPLY = 1e30;
 
     address[] public users; //active users
     mapping(address => User) public userStakeMapping;
