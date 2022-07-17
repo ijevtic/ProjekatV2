@@ -52,10 +52,13 @@ function App() {
     };
   }, []);
 
-  // useEffect(() => {
-  //   getPoolBalanceFromContract();
-  //   getTransactionsFromAddress(address);
-  // }, [address]);
+  useEffect(() => {
+    getPoolBalanceFromContract();
+  }, [contract]);
+
+  useEffect(() => {
+    getTransactionsFromAddress();
+  }, [address]);
 
   const connectWallet = async () => {
     try {
@@ -69,6 +72,7 @@ function App() {
       if (account) {
         setAddress(account);
         getbalance(account);
+        getPoolBalanceFromContract();
       }
     } catch (error) {
       console.error(error);
@@ -138,8 +142,8 @@ function App() {
     if (contract) {
       try {
         const result = await contract.balanceOfUser();
-        setBaseValue(ethers.utils.formatEther(result[0].toString()));
-        setInterestValue(ethers.utils.formatEther(result[1].toString()));
+        console.log(result);
+        setBaseValue(ethers.utils.formatEther(result.toString()));
       } catch (error) {
         console.log(error);
       }
@@ -286,9 +290,8 @@ function App() {
               <Modal.Title>After Values</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-              Base Value: {baseValue} ETH
+              After Value: {baseValue} ETH
               <br />
-              Interest Value: {interestValue} ETH
             </Modal.Body>
             <Modal.Footer>
               <Button variant="secondary" onClick={handleClose}>
