@@ -1,16 +1,32 @@
 // Importing modules
 import React, { useState, useEffect } from "react";
+import Web3Modal from 'web3modal'
+import WalletConnect from "@walletconnect/web3-provider";
 import { ethers } from "ethers";
 import "./App.css";
 import { Button, Card, Row, Col, Modal } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { abi, contractAddress } from "./constants.js";
 import CanvasJSReact from "./canvasjs.react";
-var CanvasJS = CanvasJSReact.CanvasJS;
 var CanvasJSChart = CanvasJSReact.CanvasJSChart;
+
+export const providerOptions = {
+  walletconnect: {
+    package: WalletConnect,
+    options: {
+      infuraId: "27e484dcd9e3efcfd25a83a78777cdf1"
+    }
+  }
+};
+
+const web3Modal = new Web3Modal({
+  cacheProvider: true,
+  providerOptions
+});
 
 function App() {
   const [address, setAddress] = useState("");
+  const [contract, setContract] = useState();
   const [balance, setBalance] = useState(0);
   const [poolBalance, setPoolBalance] = useState("0");
   const [baseValue, setBaseValue] = useState("0");
@@ -36,19 +52,26 @@ function App() {
     };
   }, []);
 
-  useEffect(() => {
-    getPoolBalanceFromContract();
-    getTransactionsFromAddress(address);
-  }, [address]);
+  // useEffect(() => {
+  //   getPoolBalanceFromContract();
+  //   getTransactionsFromAddress(address);
+  // }, [address]);
 
-  const connect = () => {
-    if (window.ethereum) {
-      window.ethereum.request({ method: "eth_requestAccounts" }).then((res) => {
-        setAddress(res[0]);
-        getbalance(res[0]);
-      });
-    } else {
-      alert("install metamask extension!!");
+  const connectWallet = async () => {
+    try {
+      await web3Modal.clearCachedProvider()
+      const instance = await web3Modal.connect();
+      const provider = new ethers.providers.Web3Provider(instance);
+      const signer = provider.getSigner();
+      const account = await signer.getAddress();
+      const contract = new ethers.Contract(contractAddress, abi, signer);
+      setContract(contract);
+      if (account) {
+        setAddress(account);
+        getbalance(account);
+      }
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -65,11 +88,11 @@ function App() {
       });
   };
 
-  const listenForTransactionMine = (transactionResponse, provider) => {
+  const listenForTransactionMine = (transactionResponse) => {
     console.log(`Mining ${transactionResponse.hash}...`);
     return new Promise((resolve, reject) => {
       // listen for this tx to finish
-      provider.once(transactionResponse.hash, (transactionReceipt) => {
+      contract.provider.once(transactionResponse.hash, (transactionReceipt) => {
         console.log(
           `Completed with ${transactionReceipt.confirmations} confirmations`
         );
@@ -82,22 +105,18 @@ function App() {
     const ethAmount = document.getElementById("ethAmount").value;
     console.log(`Depositing ${ethAmount} ETH...`);
 
-    if (typeof window.ethereum !== "undefined") {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-
-      const signer = provider.getSigner();
-      const contract = new ethers.Contract(contractAddress, abi, signer);
+    if (contract) {
       try {
         const transactionResponse = await contract.stakeEther({
           value: ethers.utils.parseEther(ethAmount),
         });
 
         // listen for the tx to be mined
-        await listenForTransactionMine(transactionResponse, provider);
+        await listenForTransactionMine(transactionResponse);
         console.log("done!");
         getbalance(address);
         getPoolBalanceFromContract();
-        getTransactionsFromAddress(address);
+        getTransactionsFromAddress();
       } catch (error) {
         console.log(error);
       }
@@ -105,15 +124,9 @@ function App() {
   };
 
   const getPoolBalanceFromContract = async () => {
-    if (typeof window.ethereum != "undefined") {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const contract = new ethers.Contract(contractAddress, abi, signer);
-
+    if (contract) {
       try {
-        console.log("Updating pool balance..");
         const result = await contract.getAWETHAddressBalance();
-        console.log("Pool balance: " + result.toString());
         setPoolBalance(ethers.utils.formatEther(result.toString()));
       } catch (error) {
         console.log(error);
@@ -122,10 +135,7 @@ function App() {
   };
 
   const calculateWithdrawAmount = async () => {
-    if (typeof window.ethereum != "undefined") {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const contract = new ethers.Contract(contractAddress, abi, signer);
+    if (contract) {
       try {
         const result = await contract.balanceOfUser();
         setBaseValue(ethers.utils.formatEther(result[0].toString()));
@@ -138,17 +148,14 @@ function App() {
 
   const withdraw = async () => {
     handleClose();
-    if (typeof window.ethereum != "undefined") {
+    if (contract) {
       console.log("Withdrawing...");
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const contract = new ethers.Contract(contractAddress, abi, signer);
       try {
         const transactionResponse = await contract.extractEther();
-        await listenForTransactionMine(transactionResponse, provider);
+        await listenForTransactionMine(transactionResponse);
         getbalance(address);
         getPoolBalanceFromContract();
-        getTransactionsFromAddress(address);
+        getTransactionsFromAddress();
       } catch (error) {
         console.log(error);
       }
@@ -189,7 +196,7 @@ function App() {
       });
   };
 
-  const getTransactionsFromAddress = (address) => {
+  const getTransactionsFromAddress = async () => {
     if (address) {
       fetch("http://127.0.0.1:5000/transactions/" + address)
         .then((response) => response.json())
@@ -218,7 +225,7 @@ function App() {
         </Card.Header>
         <Card.Body>
           <Card.Text>
-            <Button onClick={connect} variant="primary">
+            <Button onClick={connectWallet} variant="primary">
               Connect to wallet
             </Button>
             <br />
@@ -265,8 +272,8 @@ function App() {
                     <br />
                     Block Number : {tx.block_number}
                     <br />
-                    {tx.event ==="Withdraw" && <>Earned from withdrawals: {parseInt(tx.base)} <br /></>}
-                    {tx.event ==="Withdraw" && <>Earned from interest: {parseInt(tx.interest)}</>}
+                    {tx.event ==="Withdraw" && <>Earned from withdrawals: {ethers.utils.formatEther(tx.base.toString())} ETH<br /></>}
+                    {tx.event ==="Withdraw" && <>Earned from interest: {ethers.utils.formatEther(tx.interest.toString())} ETH</>}
                     <Card.Text></Card.Text>
                   </Card.Body>
                 </Card>
