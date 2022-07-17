@@ -100,19 +100,23 @@ contract MainContract {
 
         uint256 novaKamata = global_c * newAmountATokens * user.stakedEther/ amountATokens;
 
-        uint256 maxPovuce = novaKamata / user.c;
+        // uint256 maxPovuce = novaKamata / user.c;
+        uint256 maxPovuce = novaKamata;
 
         console.log("maxPovuce", maxPovuce);
 
-        uint256 userKamata = (novaKamata - user.stakedEther * global_c)/user.c;
+        // uint256 userKamata = (novaKamata - user.stakedEther * global_c)/user.c;
+        uint256 userKamata = (novaKamata - user.stakedEther * global_c);
 
         console.log("userKamata", userKamata);
 
         ukupnaKamata += userKamata;
 
-        uint256 zaradjenaKamataPool = (newAmountATokens - amountATokens) - userKamata;
+        // uint256 zaradjenaKamataPool = (newAmountATokens - amountATokens) - userKamata;
+        uint256 zaradjenaKamataPool = (newAmountATokens - amountATokens) * user.c - userKamat;
 
-        uint256 poolStaro = amountATokens - (user.stakedEther * global_c)/user.c;
+        // uint256 poolStaro = amountATokens - (user.stakedEther * global_c)/user.c;
+        uint256 poolStaro = amountATokens * user.c - (user.stakedEther * global_c);
 
         amountATokens = newAmountATokens;
 
@@ -129,7 +133,8 @@ contract MainContract {
         uint256 withdrawAmount = maxPovuce;
         uint256 smanjenje = 0;
         if (percentage < MULTIPLY) {
-            smanjenje = user.baseEther*(MULTIPLY - percentage) / MULTIPLY;
+            // smanjenje = user.baseEther*(MULTIPLY - percentage) / MULTIPLY;
+            smanjenje = user.c * user.baseEther*(MULTIPLY - percentage) / MULTIPLY;
         }
         console.log("smanjenje", smanjenje);
         withdrawAmount = withdrawAmount - smanjenje;
@@ -142,6 +147,7 @@ contract MainContract {
             global_c = global_c * poolNovo / poolStaro;
 
         // approve IWETH_GATEWAY to burn aWETH tokens
+        withdrawAmount = withdrawAmount / user.c; // dodao kasnije, potencijalno za brisanje
 
         aWETH_ERC20.approve(address(IWETH_GATEWAY), withdrawAmount);
         // trade aWETH tokens for ETH
