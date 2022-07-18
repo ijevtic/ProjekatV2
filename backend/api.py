@@ -58,7 +58,7 @@ w3 = Web3(Web3.HTTPProvider(provider_url))
 contract_aave = w3.eth.contract(
     address="0xE0fBa4Fc209b4948668006B2bE61711b7f465bAe", abi=abi_aave)
 contract_main = w3.eth.contract(
-    address="0xD247fE4b1508709b3Bbb0582dE9ec588d23Bf1Dc", abi=abi_main_contract)
+    address="0x24eD12F36411171D3F854dc9af9d4552988FD8Ec", abi=abi_main_contract)
 
 
 transaction_filter = contract_main.events.Transaction.createFilter(

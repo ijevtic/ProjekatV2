@@ -6,6 +6,7 @@ def calculate_base_interest(transactions:list, x:dict):
     user = x["user"]
     n = len(transactions)
     poz = -1
+    print(transactions)
     for i in range(n-1, -1, -1):
         t = transactions[i]
         if t["event"] == "WithdrawInterest":
@@ -14,7 +15,7 @@ def calculate_base_interest(transactions:list, x:dict):
             if t["event"] == "Withdraw":
                 break
             poz = i
-    
+    print('poz',poz)
     total_interest = Decimal('0')
     staked_ether = Decimal('0')
     base_ether = Decimal('0')
