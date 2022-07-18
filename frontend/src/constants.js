@@ -1,4 +1,4 @@
-export const contractAddress = "0x24eD12F36411171D3F854dc9af9d4552988FD8Ec";
+export const contractAddress = "0x912E2674E8eD7A3DE98aCc8C254a4bB58980409a";
 export const abi = [
   { inputs: [], stateMutability: "nonpayable", type: "constructor" },
   { inputs: [], name: "MainContract__AccountNotOwner", type: "error" },
@@ -106,6 +106,15 @@ export const abi = [
     name: "ownerWithdraw",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "realBalanceOfUser",
+    outputs: [
+      { internalType: "uint256", name: "withdrawAmount", type: "uint256" },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {

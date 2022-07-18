@@ -141,7 +141,7 @@ function App() {
   const calculateWithdrawAmount = async () => {
     if (contract) {
       try {
-        const result = await contract.balanceOfUser();
+        const result = await contract.realBalanceOfUser();
         console.log(result);
         setBaseValue(ethers.utils.formatEther(result.toString()));
       } catch (error) {
@@ -207,7 +207,6 @@ function App() {
         .then((data) => {
           let jsonResult = JSON.parse(data);
           jsonResult.forEach((obj) => {
-            obj["amount"] = ethers.utils.formatEther(obj["amount"].toString());
             console.log(obj);
             if(obj["event"] === "Withdraw"){
               console.log("Withdraw AAAAAAAAAAAAaa");
@@ -276,8 +275,8 @@ function App() {
                     <br />
                     Block Number : {tx.block_number}
                     <br />
-                    {tx.event ==="Withdraw" && <>Earned from withdrawals: {ethers.utils.formatEther(tx.base.toString())} ETH<br /></>}
-                    {tx.event ==="Withdraw" && <>Earned from interest: {ethers.utils.formatEther(tx.interest.toString())} ETH</>}
+                    {tx.event ==="Withdraw" && <>Earned from withdrawals: {(tx.base)} ETH<br /></>}
+                    {tx.event ==="Withdraw" && <>Earned from interest: {(tx.interest)} ETH</>}
                     <Card.Text></Card.Text>
                   </Card.Body>
                 </Card>

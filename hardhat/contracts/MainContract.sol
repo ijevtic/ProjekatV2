@@ -19,7 +19,7 @@ contract MainContract {
 
     address private immutable i_owner;
 
-    uint256 STAKE_TIME = 2 seconds;
+    uint256 STAKE_TIME = 2 minutes;
     uint256 constant MULTIPLY = 1e18;
 
     address[] public users; //active users
@@ -220,6 +220,31 @@ contract MainContract {
         amount = (user.stakedEther * global_c * newAmountATokens) / amountATokens;
         amount = amount / user.c;
         console.log(amount);
+    }
+
+    function realBalanceOfUser()
+        public
+        view
+        returns (uint256 withdrawAmount)
+    {
+        User memory user = userStakeMapping[msg.sender];
+        uint256 newAmountATokens = getAWETHAddressBalance();
+        withdrawAmount = (user.stakedEther * global_c * newAmountATokens) / amountATokens;
+        withdrawAmount = withdrawAmount / user.c;
+        uint256 percentage = MULTIPLY;
+        if(STAKE_TIME > 0) {
+            percentage = ((block.timestamp - user.startDate) * MULTIPLY) /
+                STAKE_TIME /
+                2 +
+                MULTIPLY /
+                2;
+        }
+        uint256 smanjenje = 0;
+        if (percentage < MULTIPLY) {
+            // smanjenje = user.baseEther*(MULTIPLY - percentage) / MULTIPLY;
+            smanjenje = user.baseEther*(MULTIPLY - percentage) / MULTIPLY;
+        }
+        withdrawAmount -= smanjenje;
     }
 
     receive() external payable {}
