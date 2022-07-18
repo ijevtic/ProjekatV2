@@ -30,7 +30,7 @@ function App() {
   const [balance, setBalance] = useState(0);
   const [poolBalance, setPoolBalance] = useState("0");
   const [baseValue, setBaseValue] = useState("0");
-  const [interestValue, setInterestValue] = useState("0");
+  const [balanceInPool, setBalanceInPool] = useState("0");
   const [apyData, setApyData] = useState([]);
   const [addressTxData, setAddressTxData] = useState([]);
   const [modal, setModal] = useState(false);
@@ -44,6 +44,7 @@ function App() {
   useEffect(() => {
     getAPY();
     const interval = setInterval(() => {
+      if (contract) getCurrentBalance();
       getAPY();
       getPoolBalanceFromContract();
     }, 10000);
@@ -132,6 +133,18 @@ function App() {
       try {
         const result = await contract.getAWETHAddressBalance();
         setPoolBalance(ethers.utils.formatEther(result.toString()));
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  const getCurrentBalance = async () => {
+    if (contract) {
+      try {
+        const result = await contract.balanceOfUser();
+        console.log(result);
+        setBalanceInPool(ethers.utils.formatEther(result.toString()));
       } catch (error) {
         console.log(error);
       }
@@ -236,6 +249,8 @@ function App() {
             <strong>Pool Address: {contractAddress} </strong>
             <br />
             <strong>Pool Balance: {poolBalance} aWETH </strong>
+            <br />
+            <strong>My Balance In Pool: {balanceInPool} aWETH </strong>
           </Card.Text>
           <br />
 
