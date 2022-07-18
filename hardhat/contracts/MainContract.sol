@@ -123,7 +123,7 @@ contract MainContract {
 
         console.log("userKamata", userKamata);
 
-        ukupnaKamata += userKamata;
+        ukupnaKamata += userKamata / user.c;
 
         // uint256 zaradjenaKamataPool = (newAmountATokens - amountATokens) - userKamata;
         uint256 zaradjenaKamataPool = (newAmountATokens - amountATokens) * user.c - userKamata;
